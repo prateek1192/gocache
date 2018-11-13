@@ -56,11 +56,22 @@ func (c Cache) GetShard(key string) (shard *CacheShard) {
 func expire_and_renew_element(c Cache) {
 	log.Printf("Starting expire and renew")
 	for _, shard := range c {
-		if time.Now().Sub(shard.startTime) > cache_life && shard.defined == true {
-			log.Printf("Renewing element")
-			shard.startTime = time.Now()
-		}
+		//if time.Now().Sub(shard.startTime) > cache_life && shard.defined == true {
+		//	log.Printf("Renewing element")
+		//	shard.startTime = time.Now()
+		//}
+		renew_element(shard)
 	}
    time.Sleep(10 * time.Second)
    expire_and_renew_element(c)
+}
+
+func renew_element(shard *CacheShard){
+	shard.lock.Lock()
+	defer shard.lock.Unlock()
+	if time.Now().Sub(shard.startTime) > cache_life && shard.defined == true {
+		log.Printf("Renewing element")
+		shard.startTime = time.Now()
+	}
+
 }

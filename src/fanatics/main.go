@@ -6,6 +6,7 @@ import (
     "github.com/gorilla/mux"
     "log"
     "net/http"
+    "os"
     "sync"
     "time"
     "fcache"
@@ -20,18 +21,33 @@ var certs []Certificate
 var cache fcache.Cache
 var cache_exp_time time.Duration
 func main() {
-	log.Printf("Server starting at localhost port 8080")
+	log.Printf("Server starting at localhost port 8000")
 	router := mux.NewRouter()
-	set_expiration_time(10)
+	// Cache expiration time is hardcoded but have written a method
+	// to demonstrate how it can be changed
+	set_expiration_time(30)
 	cache = fcache.New(cache_exp_time)
-	//go fcache.expire_and_renew_element(cache)
 	router.HandleFunc("/certs", GetAllCerts).Methods("GET")
 	router.HandleFunc("/cert/{domain}", GetCert).Methods("GET")
+	go requestSelfCert()
 	log.Fatal(http.ListenAndServe(":8000", router))
 }
 
+func requestSelfCert() {
+	time.Sleep(20 * time.Second)
+	_, err := http.Get("http://localhost:8000/cert/start-cert123")
+	// Since the certificate is always automatically renewed 
+	// the service runs
+	// If there was no certificate the service would have exited.
+	if err != nil {
+                log.Printf(err.Error())
+                os.Exit(1)
+        }
+
+}
+
 func set_expiration_time(time_in_seconds int){
-	cache_exp_time = 30 * time.Second
+	cache_exp_time = time.Duration(time_in_seconds) * time.Second
 }
 
 func GetAllCerts(w http.ResponseWriter, r *http.Request) {
